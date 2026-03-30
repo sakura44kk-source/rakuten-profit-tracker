@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>楽天利益トレンド追跡 - ポチポチリサーチ Pro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #fff5f7 0%, #f0ebff 100%);
+            min-height: 100vh;
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 540px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: #8b5fbf;
+            margin-bottom: 24px;
+            margin-top: 16px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 4px;
+        }
+
+        .header p {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: #999;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #ff9ec9;
+            border-bottom-color: #ff9ec9;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #ff9ec9;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+            font-size: 14px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #ff9ec9 0%, #c57eea 100%);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .btn-danger {
+            background: #ff4757;
+            color: white;
+        }
+
+        .search-results {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .product-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .product-card:hover {
+            border-color: #ff9ec9;
+            box-shadow: 0 2px 8px rgba(255, 158, 201, 0.2);
+        }
+
+        .product-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .product-price {
+            font-size: 16px;
+            color: #ff9ec9;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .product-shop {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .result {
+            background: linear-gradient(135deg, #ff9ec9 0%, #c57eea 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+        }
+
+        .result h3 {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .profit-amount {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .profit-rate {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .result-detail {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .trend-item {
+            background: #f9f9f9;
+            border-left: 4px solid #ff9ec9;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+        }
+
+        .trend-keyword {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .trend-dates {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 4px;
+        }
+
+        .trend-rank {
+            font-size: 14px;
+            color: #ff9ec9;
+            font-weight: 600;
+        }
+
+        .trend-delete {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .empty-message {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+        }
+
+        .spinner {
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #ff9ec9;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 8px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-card {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .api-status {
+            font-size: 12px;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .api-status.ready {
+            background: #ffe4f0;
+            color: #d81b60;
+        }
+
+        .api-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 楽天PRO</h1>
+            <p>利益計算 + トレンド追跡</p>
+        </div>
+
+        <!-- 設定タブ -->
+        <div class="card">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab(0)">⚙️ 設定</button>
+                <button class="tab-btn" onclick="switchTab(1)">🔍 検索</button>
+                <button class="tab-btn" onclick="switchTab(2)">📈 トレンド</button>
+            </div>
+
+            <!-- 設定タブ -->
+            <div class="tab-content active">
+                <div class="alert">楽天新API（openapi.rakuten.co.jp v2022-06-01）に対応しています</div>
+                
+                <div class="form-group">
+                    <label>🔑 ApplicationID</label>
+                    <textarea id="appId" placeholder="UUID形式のApplicationID を入力"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>🔐 AccessKey</label>
+                    <textarea id="accessKey" placeholder="AccessKey を入力してください（pk_で始まる）"></textarea>
+                </div>
+
+                <button class="btn-primary" onclick="saveApiKeys()">APIキーを保存</button>
+                <div class="api-status" id="apiStatus"></div>
+
+                <div class="stat-grid" style="margin-top: 20px;">
+                    <div class="stat-card">
+                        <div class="stat-label">検索実績</div>
+                        <div class="stat-value" id="totalSearches">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">トレンド追跡</div>
+                        <div class="stat-value" id="trendCount">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 検索タブ -->
+            <div class="tab-content">
+                <div class="form-group">
+                    <label>🔎 商品名で検索</label>
+                    <input type="text" id="searchKeyword" placeholder="例：限定品、マキタ インパクト">
+                </div>
+
+                <button class="btn-primary" onclick="searchRakuten()">検索</button>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <div>検索中...</div>
+                </div>
+
+                <div id="alerts"></div>
+
+                <div class="search-results" id="searchResults"></div>
+            </div>
+
+            <!-- トレンドタブ -->
+            <div class="tab-content">
+                <div class="form-group">
+                    <label>📊 トレンド追跡キーワード</label>
+                    <input type="text" id="trendKeyword" placeholder="例：限定品">
+                </div>
+
+                <button class="btn-primary" onclick="addTrendKeyword()">追跡開始</button>
+
+                <div id="trendList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RakutenProfitTracker {
+            constructor() {
+                this.dbName = 'RakutenTrackerDB';
+                this.storeName = 'settings';
+                this.initDB().then(async () => {
+                    await this.loadApiKeys();
+                    this.updateStats();
+                    this.renderTrends();
+                });
+            }
+
+            initDB() {
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(this.dbName, 1);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => {
+                        this.db = request.result;
+                        resolve();
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        const db = event.target.result;
+                        if (!db.objectStoreNames.contains(this.storeName)) {
+                            db.createObjectStore(this.storeName);
+                        }
+                    };
+                });
+            }
+
+            async loadApiKeys() {
+                const [appId, accessKey, searchHistory, trendHistory] = await Promise.all([
+                    this.getFromDB('appId'),
+                    this.getFromDB('accessKey'),
+                    this.getFromDB('searchHistory'),
+                    this.getFromDB('trendHistory')
+                ]);
+
+                this.appId = appId || '';
+                this.accessKey = accessKey || '';
+                this.searchHistory = searchHistory || [];
+                this.trendHistory = trendHistory || [];
+
+                if (this.appId) {
+                    document.getElementById('appId').value = this.appId;
+                }
+                if (this.accessKey) {
+                    document.getElementById('accessKey').value = this.accessKey;
+                }
+
+                this.updateApiStatus();
+            }
+
+            getFromDB(key) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readonly');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.get(key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve(request.result);
+                });
+            }
+
+            setInDB(key, value) {
+                return new Promise((resolve, reject) => {
+                    const transaction = this.db.transaction([this.storeName], 'readwrite');
+                    const store = transaction.objectStore(this.storeName);
+                    const request = store.put(value, key);
+                    
+                    request.onerror = () => reject(request.error);
+                    request.onsuccess = () => resolve();
+                });
+            }
+
+            saveApiKeys() {
+                const appId = document.getElementById('appId').value.trim();
+                const accessKey = document.getElementById('accessKey').value.trim();
+
+                if (!appId || !accessKey) {
+                    this.showAlert('ApplicationIDとAccessKeyの両方を入力してください', 'error');
+                    return;
+                }
+
+                Promise.all([
+                    this.setInDB('appId', appId),
+                    this.setInDB('accessKey', accessKey)
+                ]).then(() => {
+                    this.appId = appId;
+                    this.accessKey = accessKey;
+                    this.showAlert('APIキーを保存しました ✅', 'success');
+                    this.updateApiStatus();
+                }).catch(err => {
+                    this.showAlert(`保存エラー: ${err.message}`, 'error');
+                });
+            }
+
+            updateApiStatus() {
+                const statusEl = document.getElementById('apiStatus');
+                if (this.appId && this.accessKey) {
+                    statusEl.className = 'api-status ready';
+                    statusEl.textContent = '✅ APIキーが設定されています';
+                } else {
+                    statusEl.className = 'api-status error';
+                    statusEl.textContent = '⚠️ APIキーを設定してください';
+                }
+            }
+
+            async searchRakuten() {
+                const keyword = document.getElementById('searchKeyword').value.trim();
+
+                if (!keyword) {
+                    this.showAlert('商品名を入力してください', 'error');
+                    return;
+                }
+
+                if (!this.appId) {
+                    this.showAlert('先に設定タブでAPIキーを設定してください', 'error');
+                    return;
+                }
+
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('searchResults').innerHTML = '';
+
+                try {
+                    const response = await fetch(
+                        `https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?` +
+                        `format=json&` +
+                        `keyword=${encodeURIComponent(keyword)}&` +
+                        `hits=30&` +
+                        `applicationId=${encodeURIComponent(this.appId)}&` +
+                        `accessKey=${encodeURIComponent(this.accessKey)}`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (!data.Items || data.Items.length === 0) {
+                        this.showAlert('検索結果がありません', 'error');
+                        document.getElementById('loading').style.display = 'none';
+                        return;
+                    }
+
+                    this.displaySearchResults(data.Items, keyword);
+
+                    // 検索履歴に記録
+                    this.searchHistory.unshift({
+                        keyword,
+                        timestamp: new Date().toLocaleString('ja-JP'),
+                        resultCount: data.Items.length
+                    });
+                    if (this.searchHistory.length > 50) this.searchHistory.pop();
+                    this.setInDB('searchHistory', this.searchHistory);
+                    this.updateStats();
+
+                } catch (error) {
+                    this.showAlert(`エラー: ${error.message}`, 'error');
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
+            }
+
+            displaySearchResults(items, keyword) {
+                const resultsEl = document.getElementById('searchResults');
+                resultsEl.innerHTML = '';
+
+                items.forEach((itemWrapper, index) => {
+                    const item = itemWrapper.Item;
+                    const price = item.itemPrice;
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <div class="product-name">${item.itemName}</div>
+                        <div class="product-price">¥${price.toLocaleString('ja-JP')}</div>
+                        <div class="product-shop">${item.shopName || '楽天市場'}</div>
+                        <div style="font-size: 12px; color: #667eea; margin-top: 8px;">📊 タップして詳細・購入へ</div>
+                    `;
+                    
+                    card.onclick = () => {
+                        window.open(item.itemUrl, '_blank');
+                    };
+
+                    resultsEl.appendChild(card);
+                });
+            }
+
+            addTrendKeyword() {
+                const keyword = document.getElementById('trendKeyword').value.trim();
+
+                if (!keyword) {
+                    this.showAlert('キーワードを入力してください', 'error');
+                    return;
+                }
+
+                if (!this.appId) {
+                    this.showAlert('先に設定タブでAPIキーを設定してください', 'error');
+                    return;
+                }
+
+                const existing = this.trendHistory.find(t => t.keyword === keyword);
+                if (existing) {
+                    this.showAlert('このキーワードは既に追跡中です', 'error');
+                    return;
+                }
+
+                this.trendHistory.unshift({
+                    id: Date.now(),
+                    keyword,
+                    startDate: new Date().toLocaleString('ja-JP'),
+                    records: []
+                });
+
+                this.setInDB('trendHistory', this.trendHistory);
+                document.getElementById('trendKeyword').value = '';
+                this.renderTrends();
+                this.updateStats();
+                this.showAlert(`「${keyword}」の追跡を開始しました`, 'success');
+            }
+
+            deleteTrend(id) {
+                this.trendHistory = this.trendHistory.filter(t => t.id !== id);
+                this.setInDB('trendHistory', this.trendHistory);
+                this.renderTrends();
+                this.updateStats();
+            }
+
+            renderTrends() {
+                const trendListEl = document.getElementById('trendList');
+                
+                if (this.trendHistory.length === 0) {
+                    trendListEl.innerHTML = '<div class="empty-message">追跡中のキーワードがありません</div>';
+                    return;
+                }
+
+                trendListEl.innerHTML = this.trendHistory.map(trend => `
+                    <div class="trend-item">
+                        <div class="trend-keyword">${trend.keyword}</div>
+                        <div class="trend-dates">開始：${trend.startDate}</div>
+                        <div class="trend-rank">記録数：${trend.records.length}件</div>
+                        <button class="trend-delete" onclick="tracker.deleteTrend(${trend.id})">削除</button>
+                    </div>
+                `).join('');
+            }
+
+            updateStats() {
+                document.getElementById('totalSearches').textContent = (this.searchHistory || []).length;
+                document.getElementById('trendCount').textContent = (this.trendHistory || []).length;
+            }
+
+            showAlert(message, type = 'success') {
+                const alertsEl = document.getElementById('alerts');
+                const alert = document.createElement('div');
+                alert.className = `alert ${type === 'error' ? 'error' : ''}`;
+                alert.textContent = message;
+                alertsEl.appendChild(alert);
+
+                setTimeout(() => alert.remove(), 3000);
+            }
+        }
+
+        let tracker = new RakutenProfitTracker();
+
+        function switchTab(index) {
+            const tabs = document.querySelectorAll('.tab-content');
+            const buttons = document.querySelectorAll('.tab-btn');
+            tabs.forEach((tab, i) => {
+                tab.classList.toggle('active', i === index);
+            });
+            buttons.forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+            });
+        }
+
+        function saveApiKeys() {
+            tracker.saveApiKeys();
+        }
+
+        function searchRakuten() {
+            tracker.searchRakuten();
+        }
+
+        function addTrendKeyword() {
+            tracker.addTrendKeyword();
+        }
+    </script>
+</body>
+</html>
