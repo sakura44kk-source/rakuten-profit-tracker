@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+   <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -440,46 +440,13 @@
     <script>
         class RakutenProfitTracker {
             constructor() {
-                this.dbName = 'RakutenTrackerDB';
-                this.storeName = 'settings';
-                this.initDB().then(async () => {
-                    await this.loadApiKeys();
-                    this.updateStats();
-                    this.renderTrends();
-                });
-            }
-
-            initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(this.dbName, 1);
-                    
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => {
-                        this.db = request.result;
-                        resolve();
-                    };
-                    
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains(this.storeName)) {
-                            db.createObjectStore(this.storeName);
-                        }
-                    };
-                });
-            }
-
-            async loadApiKeys() {
-                const [appId, accessKey, searchHistory, trendHistory] = await Promise.all([
-                    this.getFromDB('appId'),
-                    this.getFromDB('accessKey'),
-                    this.getFromDB('searchHistory'),
-                    this.getFromDB('trendHistory')
-                ]);
-
-                this.appId = appId || '';
-                this.accessKey = accessKey || '';
-                this.searchHistory = searchHistory || [];
-                this.trendHistory = trendHistory || [];
+                this.appId = localStorage.getItem('rakutenAppId') || '';
+                this.accessKey = localStorage.getItem('rakutenAccessKey') || '';
+                this.searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
+                this.trendHistory = JSON.parse(localStorage.getItem('trendHistory')) || [];
+                this.updateApiStatus();
+                this.updateStats();
+                this.renderTrends();
 
                 if (this.appId) {
                     document.getElementById('appId').value = this.appId;
@@ -487,30 +454,6 @@
                 if (this.accessKey) {
                     document.getElementById('accessKey').value = this.accessKey;
                 }
-
-                this.updateApiStatus();
-            }
-
-            getFromDB(key) {
-                return new Promise((resolve, reject) => {
-                    const transaction = this.db.transaction([this.storeName], 'readonly');
-                    const store = transaction.objectStore(this.storeName);
-                    const request = store.get(key);
-                    
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => resolve(request.result);
-                });
-            }
-
-            setInDB(key, value) {
-                return new Promise((resolve, reject) => {
-                    const transaction = this.db.transaction([this.storeName], 'readwrite');
-                    const store = transaction.objectStore(this.storeName);
-                    const request = store.put(value, key);
-                    
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => resolve();
-                });
             }
 
             saveApiKeys() {
@@ -522,17 +465,13 @@
                     return;
                 }
 
-                Promise.all([
-                    this.setInDB('appId', appId),
-                    this.setInDB('accessKey', accessKey)
-                ]).then(() => {
-                    this.appId = appId;
-                    this.accessKey = accessKey;
-                    this.showAlert('APIキーを保存しました ✅', 'success');
-                    this.updateApiStatus();
-                }).catch(err => {
-                    this.showAlert(`保存エラー: ${err.message}`, 'error');
-                });
+                localStorage.setItem('rakutenAppId', appId);
+                localStorage.setItem('rakutenAccessKey', accessKey);
+                this.appId = appId;
+                this.accessKey = accessKey;
+
+                this.showAlert('APIキーを保存しました ✅', 'success');
+                this.updateApiStatus();
             }
 
             updateApiStatus() {
@@ -593,7 +532,7 @@
                         resultCount: data.Items.length
                     });
                     if (this.searchHistory.length > 50) this.searchHistory.pop();
-                    this.setInDB('searchHistory', this.searchHistory);
+                    localStorage.setItem('searchHistory', JSON.stringify(this.searchHistory));
                     this.updateStats();
 
                 } catch (error) {
@@ -654,7 +593,7 @@
                     records: []
                 });
 
-                this.setInDB('trendHistory', this.trendHistory);
+                localStorage.setItem('trendHistory', JSON.stringify(this.trendHistory));
                 document.getElementById('trendKeyword').value = '';
                 this.renderTrends();
                 this.updateStats();
@@ -663,7 +602,7 @@
 
             deleteTrend(id) {
                 this.trendHistory = this.trendHistory.filter(t => t.id !== id);
-                this.setInDB('trendHistory', this.trendHistory);
+                localStorage.setItem('trendHistory', JSON.stringify(this.trendHistory));
                 this.renderTrends();
                 this.updateStats();
             }
@@ -687,8 +626,8 @@
             }
 
             updateStats() {
-                document.getElementById('totalSearches').textContent = (this.searchHistory || []).length;
-                document.getElementById('trendCount').textContent = (this.trendHistory || []).length;
+                document.getElementById('totalSearches').textContent = this.searchHistory.length;
+                document.getElementById('trendCount').textContent = this.trendHistory.length;
             }
 
             showAlert(message, type = 'success') {
