@@ -703,6 +703,8 @@
 
         let tracker = new RakutenProfitTracker();
 
+        let tracker;
+
         function switchTab(index) {
             const tabs = document.querySelectorAll('.tab-content');
             const buttons = document.querySelectorAll('.tab-btn');
@@ -718,8 +720,6 @@
             tracker.saveApiKeys();
         }
 
-        const tracker = new RakutenProfitTracker();
-
         function searchRakuten() {
             tracker.searchRakuten();
         }
@@ -727,6 +727,11 @@
         function addTrendKeyword() {
             tracker.addTrendKeyword();
         }
+
+        // DOMが読み込まれた後にtracker を初期化
+        document.addEventListener('DOMContentLoaded', () => {
+            tracker = new RakutenProfitTracker();
+        });
     </script>
 </body>
 </html>
