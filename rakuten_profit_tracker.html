@@ -717,19 +717,18 @@
         }
 
         function saveApiKeys() {
-            tracker.saveApiKeys();
+            if (tracker) tracker.saveApiKeys();
         }
 
         function searchRakuten() {
-            tracker.searchRakuten();
+            if (tracker) tracker.searchRakuten();
         }
 
         function addTrendKeyword() {
-            tracker.addTrendKeyword();
+            if (tracker) tracker.addTrendKeyword();
         }
 
-        // DOMが読み込まれた後にtracker を初期化
-        document.addEventListener('DOMContentLoaded', () => {
+        window.addEventListener('load', () => {
             tracker = new RakutenProfitTracker();
         });
     </script>
