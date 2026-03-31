@@ -609,13 +609,21 @@
                 sorted.forEach((itemWrapper) => {
                     const item = itemWrapper.Item;
                     const price = item.itemPrice;
+                    const tagIds = item.tagIds || [];
 
                     const card = document.createElement('div');
                     card.className = 'product-card';
+                    
+                    let tagsHTML = '';
+                    if (tagIds.length > 0) {
+                        tagsHTML = `<div style="font-size: 11px; color: #999; margin-top: 6px;">タグ: ${tagIds.join(', ')}</div>`;
+                    }
+                    
                     card.innerHTML = `
                         <div class="product-name">${item.itemName}</div>
                         <div class="product-price">¥${price.toLocaleString('ja-JP')}</div>
                         <div class="product-shop">${item.shopName || '楽天市場'}</div>
+                        ${tagsHTML}
                         <div style="font-size: 12px; color: #667eea; margin-top: 8px;">📊 タップして詳細・購入へ</div>
                     `;
                     
