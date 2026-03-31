@@ -1,4 +1,4 @@
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -546,7 +546,67 @@
                 const resultsEl = document.getElementById('searchResults');
                 resultsEl.innerHTML = '';
 
+                // 並べ替えボタンを追加
+                const sortContainer = document.createElement('div');
+                sortContainer.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;';
+                sortContainer.innerHTML = `
+                    <button onclick="tracker.sortResults('price-asc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">💰 安い順</button>
+                    <button onclick="tracker.sortResults('price-desc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">🆙 高い順</button>
+                    <button onclick="tracker.sortResults('original')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #c57eea; color: white; cursor: pointer; font-size: 12px;">⭐ デフォルト</button>
+                `;
+                resultsEl.appendChild(sortContainer);
+
+                // 検索結果を保存
+                this.lastSearchResults = items;
+
+                // 商品を表示
                 items.forEach((itemWrapper, index) => {
+                    const item = itemWrapper.Item;
+                    const price = item.itemPrice;
+
+                    const card = document.createElement('div');
+                    card.className = 'product-card';
+                    card.innerHTML = `
+                        <div class="product-name">${item.itemName}</div>
+                        <div class="product-price">¥${price.toLocaleString('ja-JP')}</div>
+                        <div class="product-shop">${item.shopName || '楽天市場'}</div>
+                        <div style="font-size: 12px; color: #667eea; margin-top: 8px;">📊 タップして詳細・購入へ</div>
+                    `;
+                    
+                    card.onclick = () => {
+                        window.open(item.itemUrl, '_blank');
+                    };
+
+                    resultsEl.appendChild(card);
+                });
+            }
+
+            sortResults(type) {
+                if (!this.lastSearchResults) return;
+
+                let sorted = [...this.lastSearchResults];
+
+                if (type === 'price-asc') {
+                    sorted.sort((a, b) => a.Item.itemPrice - b.Item.itemPrice);
+                } else if (type === 'price-desc') {
+                    sorted.sort((a, b) => b.Item.itemPrice - a.Item.itemPrice);
+                }
+
+                const resultsEl = document.getElementById('searchResults');
+                resultsEl.innerHTML = '';
+
+                // 並べ替えボタンを再表示
+                const sortContainer = document.createElement('div');
+                sortContainer.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;';
+                sortContainer.innerHTML = `
+                    <button onclick="tracker.sortResults('price-asc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">💰 安い順</button>
+                    <button onclick="tracker.sortResults('price-desc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">🆙 高い順</button>
+                    <button onclick="tracker.sortResults('original')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #c57eea; color: white; cursor: pointer; font-size: 12px;">⭐ デフォルト</button>
+                `;
+                resultsEl.appendChild(sortContainer);
+
+                // ソート済みの商品を表示
+                sorted.forEach((itemWrapper) => {
                     const item = itemWrapper.Item;
                     const price = item.itemPrice;
 
@@ -657,6 +717,8 @@
         function saveApiKeys() {
             tracker.saveApiKeys();
         }
+
+        const tracker = new RakutenProfitTracker();
 
         function searchRakuten() {
             tracker.searchRakuten();
