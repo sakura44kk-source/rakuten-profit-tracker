@@ -699,11 +699,6 @@
                     return;
                 }
 
-                if (!this.appId) {
-                    this.showAlert('先に設定タブでAPIキーを設定してください', 'error');
-                    return;
-                }
-
                 const existing = this.trendHistory.find(t => t.keyword === keyword);
                 if (existing) {
                     this.showAlert('このキーワードは既に追跡中です', 'error');
