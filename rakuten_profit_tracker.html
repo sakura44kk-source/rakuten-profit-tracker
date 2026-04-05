@@ -377,7 +377,7 @@
 
             <!-- 設定タブ -->
             <div class="tab-content active">
-                <div class="alert">楽天新API（openapi.rakuten.co.jp v2022-06-01）に対応しています</div>
+                <div class="alert">⚠️ APIキーは保存されません。毎回起動時に入力してください。</div>
                 
                 <div class="form-group">
                     <label>🔑 ApplicationID</label>
@@ -389,7 +389,7 @@
                     <textarea id="accessKey" placeholder="AccessKey を入力してください（pk_で始まる）"></textarea>
                 </div>
 
-                <button class="btn-primary" onclick="saveApiKeys()">APIキーを保存</button>
+                <button class="btn-primary" onclick="saveApiKeys()">APIキーをセット（保存しない）</button>
                 <div class="api-status" id="apiStatus"></div>
 
                 <div class="stat-grid" style="margin-top: 20px;">
@@ -440,20 +440,13 @@
     <script>
         class RakutenProfitTracker {
             constructor() {
-                this.appId = localStorage.getItem('rakutenAppId') || '';
-                this.accessKey = localStorage.getItem('rakutenAccessKey') || '';
+                this.appId = '';
+                this.accessKey = '';
                 this.searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
                 this.trendHistory = JSON.parse(localStorage.getItem('trendHistory')) || [];
                 this.updateApiStatus();
                 this.updateStats();
                 this.renderTrends();
-
-                if (this.appId) {
-                    document.getElementById('appId').value = this.appId;
-                }
-                if (this.accessKey) {
-                    document.getElementById('accessKey').value = this.accessKey;
-                }
             }
 
             saveApiKeys() {
@@ -465,12 +458,10 @@
                     return;
                 }
 
-                localStorage.setItem('rakutenAppId', appId);
-                localStorage.setItem('rakutenAccessKey', accessKey);
                 this.appId = appId;
                 this.accessKey = accessKey;
 
-                this.showAlert('APIキーを保存しました ✅', 'success');
+                this.showAlert('APIキーをセットしました ✅（保存はされません）', 'success');
                 this.updateApiStatus();
             }
 
@@ -486,7 +477,8 @@
             }
 
             async searchRakuten() {
-                const keyword = document.getElementById('searchKeyword').value.trim();
+                const inputKeyword = document.getElementById('searchKeyword').value.trim();
+                const keyword = inputKeyword || this.lastKeyword;
 
                 if (!keyword) {
                     this.showAlert('商品名を入力してください', 'error');
@@ -507,7 +499,8 @@
                         `format=json&` +
                         `keyword=${encodeURIComponent(keyword)}&` +
                         `hits=30&` +
-                        `elements=itemName,itemPrice,itemUrl,shopName,tagIds&` +
+                        `sort=${encodeURIComponent(this.currentSort || 'standard')}&` +
+                        `elements=itemName,itemPrice,itemUrl,shopName,reviewCount,reviewAverage&` +
                         `applicationId=${encodeURIComponent(this.appId)}&` +
                         `accessKey=${encodeURIComponent(this.accessKey)}`
                     );
@@ -546,94 +539,61 @@
             displaySearchResults(items, keyword) {
                 const resultsEl = document.getElementById('searchResults');
                 resultsEl.innerHTML = '';
-
-                // 並べ替えボタンを追加
-                const sortContainer = document.createElement('div');
-                sortContainer.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;';
-                sortContainer.innerHTML = `
-                    <button onclick="tracker.sortResults('price-asc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">💰 安い順</button>
-                    <button onclick="tracker.sortResults('price-desc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">🆙 高い順</button>
-                    <button onclick="tracker.sortResults('original')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #c57eea; color: white; cursor: pointer; font-size: 12px;">⭐ デフォルト</button>
-                `;
-                resultsEl.appendChild(sortContainer);
-
-                // 検索結果を保存
                 this.lastSearchResults = items;
+                this.lastKeyword = keyword;
 
-                // 商品を表示
-                items.forEach((itemWrapper, index) => {
+                this._renderSortButtons();
+                this._renderItems(items);
+            }
+
+            _renderSortButtons() {
+                const resultsEl = document.getElementById('searchResults');
+                const sorts = [
+                    { key: 'standard',        label: '⭐ おすすめ' },
+                    { key: '-updateTimestamp', label: '🆕 新着順' },
+                    { key: '-reviewCount',     label: '🔥 人気順' },
+                    { key: '+itemPrice',       label: '💰 安い順' },
+                    { key: '-itemPrice',       label: '💎 高い順' },
+                ];
+                const container = document.createElement('div');
+                container.id = 'sortContainer';
+                container.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;';
+                sorts.forEach(s => {
+                    const btn = document.createElement('button');
+                    btn.textContent = s.label;
+                    const active = (this.currentSort || 'standard') === s.key;
+                    btn.style.cssText = `padding: 8px 12px; border: 2px solid ${active ? '#c57eea' : '#ddd'}; border-radius: 8px; background: ${active ? '#c57eea' : '#f5f5f5'}; color: ${active ? 'white' : '#333'}; cursor: pointer; font-size: 12px;`;
+                    btn.onclick = () => this.changeSort(s.key);
+                    container.appendChild(btn);
+                });
+                resultsEl.appendChild(container);
+            }
+
+            _renderItems(items) {
+                const resultsEl = document.getElementById('searchResults');
+                items.forEach((itemWrapper) => {
                     const item = itemWrapper.Item;
                     const price = item.itemPrice;
-
+                    const reviews = item.reviewCount ? `⭐ ${item.reviewAverage} (${item.reviewCount}件)` : '';
                     const card = document.createElement('div');
                     card.className = 'product-card';
                     card.innerHTML = `
                         <div class="product-name">${item.itemName}</div>
                         <div class="product-price">¥${price.toLocaleString('ja-JP')}</div>
                         <div class="product-shop">${item.shopName || '楽天市場'}</div>
+                        ${reviews ? `<div style="font-size: 12px; color: #f5a623; margin-top: 4px;">${reviews}</div>` : ''}
                         <div style="font-size: 12px; color: #667eea; margin-top: 8px;">📊 タップして詳細・購入へ</div>
                     `;
-                    
-                    card.onclick = () => {
-                        window.open(item.itemUrl, '_blank');
-                    };
-
+                    card.onclick = () => window.open(item.itemUrl, '_blank');
                     resultsEl.appendChild(card);
                 });
             }
 
-            sortResults(type) {
-                if (!this.lastSearchResults) return;
-
-                let sorted = [...this.lastSearchResults];
-
-                if (type === 'price-asc') {
-                    sorted.sort((a, b) => a.Item.itemPrice - b.Item.itemPrice);
-                } else if (type === 'price-desc') {
-                    sorted.sort((a, b) => b.Item.itemPrice - a.Item.itemPrice);
+            async changeSort(sortKey) {
+                this.currentSort = sortKey;
+                if (this.lastKeyword) {
+                    await this.searchRakuten();
                 }
-
-                const resultsEl = document.getElementById('searchResults');
-                resultsEl.innerHTML = '';
-
-                // 並べ替えボタンを再表示
-                const sortContainer = document.createElement('div');
-                sortContainer.style.cssText = 'display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap;';
-                sortContainer.innerHTML = `
-                    <button onclick="tracker.sortResults('price-asc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">💰 安い順</button>
-                    <button onclick="tracker.sortResults('price-desc')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #ff9ec9; color: white; cursor: pointer; font-size: 12px;">🆙 高い順</button>
-                    <button onclick="tracker.sortResults('original')" style="padding: 8px 12px; border: none; border-radius: 8px; background: #c57eea; color: white; cursor: pointer; font-size: 12px;">⭐ デフォルト</button>
-                `;
-                resultsEl.appendChild(sortContainer);
-
-                // ソート済みの商品を表示
-                sorted.forEach((itemWrapper) => {
-                    const item = itemWrapper.Item;
-                    const price = item.itemPrice;
-                    const tagIds = item.tagIds || [];
-
-                    const card = document.createElement('div');
-                    card.className = 'product-card';
-                    
-                    let tagsHTML = '';
-                    if (tagIds.length > 0) {
-                        tagsHTML = `<div style="font-size: 11px; color: #999; margin-top: 6px;">タグ: ${tagIds.join(', ')}</div>`;
-                    }
-                    
-                    card.innerHTML = `
-                        <div class="product-name">${item.itemName}</div>
-                        <div class="product-price">¥${price.toLocaleString('ja-JP')}</div>
-                        <div class="product-shop">${item.shopName || '楽天市場'}</div>
-                        ${tagsHTML}
-                        <div style="font-size: 12px; color: #667eea; margin-top: 8px;">📊 タップして詳細・購入へ</div>
-                    `;
-                    
-                    card.onclick = () => {
-                        window.open(item.itemUrl, '_blank');
-                    };
-
-                    resultsEl.appendChild(card);
-                });
             }
 
             addTrendKeyword() {
