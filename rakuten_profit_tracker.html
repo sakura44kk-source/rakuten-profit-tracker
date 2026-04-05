@@ -457,6 +457,7 @@
 
                 <button class="btn-primary" onclick="addTrendKeyword()">追跡開始</button>
 
+                <button onclick="recordAllTrends()" style="width:100%;margin-top:8px;padding:12px;background:#48bb78;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;">📊 全キーワードを一括記録</button>
                 <div id="trendList"></div>
             </div>
         </div>
@@ -840,6 +841,15 @@
 
         function addTrendKeyword() {
             if (tracker) tracker.addTrendKeyword();
+        }
+        async function recordAllTrends() {
+            if (!tracker || tracker.trendHistory.length === 0) {
+                alert('追跡中のキーワードがありません');
+                return;
+            }
+            for (var i = 0; i < tracker.trendHistory.length; i++) {
+                await tracker.recordTrend(tracker.trendHistory[i].keyword);
+            }
         }
 
         window.addEventListener('load', () => {
