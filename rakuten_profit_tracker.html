@@ -377,19 +377,44 @@
 
             <!-- 設定タブ -->
             <div class="tab-content active">
-                <div class="alert">⚠️ APIキーは保存されません。毎回起動時に入力してください。</div>
-                
-                <div class="form-group">
-                    <label>🔑 ApplicationID</label>
-                    <textarea id="appId" placeholder="UUID形式のApplicationID を入力"></textarea>
+
+                <!-- ロック解除セクション（2回目以降） -->
+                <div id="unlockSection" style="display:none;">
+                    <div class="alert">🔒 パスワードを入力してAPIキーを使用できます</div>
+                    <div class="form-group">
+                        <label>🔑 パスワード</label>
+                        <input type="password" id="unlockPw" placeholder="設定したパスワードを入力">
+                    </div>
+                    <button class="btn-primary" onclick="unlockWithPw()">ロック解除</button>
                 </div>
 
-                <div class="form-group">
-                    <label>🔐 AccessKey</label>
-                    <textarea id="accessKey" placeholder="AccessKey を入力してください（pk_で始まる）"></textarea>
+                <!-- APIキー入力セクション（初回） -->
+                <div id="keySection">
+                    <div class="alert">🔐 APIキーはパスワードで暗号化して保存されます</div>
+                    <div class="form-group">
+                        <label>🔑 ApplicationID</label>
+                        <textarea id="appId" placeholder="UUID形式のApplicationID を入力"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>🔐 AccessKey</label>
+                        <textarea id="accessKey" placeholder="AccessKey を入力してください（pk_で始まる）"></textarea>
+                    </div>
                 </div>
 
-                <button class="btn-primary" onclick="saveApiKeys()">APIキーをセット（保存しない）</button>
+                <!-- パスワード設定セクション（初回） -->
+                <div id="pwSection">
+                    <div class="form-group">
+                        <label>🔑 パスワードを設定</label>
+                        <input type="password" id="setPw" placeholder="覚えやすいパスワードを入力">
+                    </div>
+                    <button class="btn-primary" onclick="saveApiKeys()">APIキーを暗号化して保存</button>
+                </div>
+
+                <!-- リセットボタン（保存済み時） -->
+                <div id="resetSection" style="display:none;">
+                    <button onclick="resetKeys()" style="background:#ff7675;color:white;border:none;padding:10px;border-radius:8px;cursor:pointer;width:100%;margin-top:8px;">🔄 APIキーをリセット</button>
+                </div>
+
                 <div class="api-status" id="apiStatus"></div>
 
                 <div class="stat-grid" style="margin-top: 20px;">
@@ -447,22 +472,92 @@
                 this.updateApiStatus();
                 this.updateStats();
                 this.renderTrends();
+                this.checkStoredKeys();
             }
 
             saveApiKeys() {
                 const appId = document.getElementById('appId').value.trim();
                 const accessKey = document.getElementById('accessKey').value.trim();
+                const pw = document.getElementById('setPw').value.trim();
 
                 if (!appId || !accessKey) {
                     this.showAlert('ApplicationIDとAccessKeyの両方を入力してください', 'error');
                     return;
                 }
+                if (!pw) {
+                    this.showAlert('パスワードを入力してください', 'error');
+                    return;
+                }
 
+                // XOR簡易暗号化
+                const encrypt = (str, key) => {
+                    return btoa(str.split('').map((c,i) =>
+                        String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length))
+                    ).join(''));
+                };
+
+                localStorage.setItem('enc_appId', encrypt(appId, pw));
+                localStorage.setItem('enc_accessKey', encrypt(accessKey, pw));
                 this.appId = appId;
                 this.accessKey = accessKey;
 
-                this.showAlert('APIキーをセットしました ✅（保存はされません）', 'success');
+                this.showAlert('APIキーを保存しました ✅', 'success');
                 this.updateApiStatus();
+                document.getElementById('pwSection').style.display = 'none';
+                document.getElementById('keySection').style.display = 'none';
+                document.getElementById('resetSection').style.display = 'block';
+            }
+
+            checkStoredKeys() {
+                const hasKeys = localStorage.getItem('enc_appId');
+                if (hasKeys) {
+                    document.getElementById('keySection').style.display = 'none';
+                    document.getElementById('pwSection').style.display = 'none';
+                    document.getElementById('unlockSection').style.display = 'block';
+                    document.getElementById('resetSection').style.display = 'block';
+                }
+            }
+
+            unlockWithPw() {
+                const pw = document.getElementById('unlockPw').value.trim();
+                if (!pw) {
+                    this.showAlert('パスワードを入力してください', 'error');
+                    return;
+                }
+                const decrypt = (enc, key) => {
+                    try {
+                        return atob(enc).split('').map((c,i) =>
+                            String.fromCharCode(c.charCodeAt(0) ^ key.charCodeAt(i % key.length))
+                        ).join('');
+                    } catch(e) { return null; }
+                };
+                const appId = decrypt(localStorage.getItem('enc_appId'), pw);
+                const accessKey = decrypt(localStorage.getItem('enc_accessKey'), pw);
+
+                // 簡易チェック：UUIDらしいか
+                if (!appId || appId.length < 10) {
+                    this.showAlert('パスワードが違います', 'error');
+                    return;
+                }
+                this.appId = appId;
+                this.accessKey = accessKey;
+                this.showAlert('ロック解除しました ✅', 'success');
+                this.updateApiStatus();
+                document.getElementById('unlockSection').style.display = 'none';
+            }
+
+            resetKeys() {
+                if (!confirm('APIキーをリセットしますか？再入力が必要になります。')) return;
+                localStorage.removeItem('enc_appId');
+                localStorage.removeItem('enc_accessKey');
+                this.appId = '';
+                this.accessKey = '';
+                this.updateApiStatus();
+                document.getElementById('unlockSection').style.display = 'none';
+                document.getElementById('keySection').style.display = 'block';
+                document.getElementById('pwSection').style.display = 'block';
+                document.getElementById('resetSection').style.display = 'none';
+                this.showAlert('リセットしました', 'success');
             }
 
             updateApiStatus() {
@@ -683,9 +778,9 @@
             });
         }
 
-        function saveApiKeys() {
-            if (tracker) tracker.saveApiKeys();
-        }
+        function saveApiKeys() { if (tracker) tracker.saveApiKeys(); }
+        function unlockWithPw() { if (tracker) tracker.unlockWithPw(); }
+        function resetKeys() { if (tracker) tracker.resetKeys(); }
 
         function searchRakuten() {
             if (tracker) tracker.searchRakuten();
