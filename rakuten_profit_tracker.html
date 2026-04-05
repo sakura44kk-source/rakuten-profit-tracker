@@ -849,6 +849,7 @@
             }
             for (var i = 0; i < tracker.trendHistory.length; i++) {
                 await tracker.recordTrend(tracker.trendHistory[i].keyword);
+                await new Promise(function(r){ setTimeout(r, 2000); });
             }
         }
 
