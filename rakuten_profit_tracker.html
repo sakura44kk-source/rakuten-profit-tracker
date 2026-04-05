@@ -468,6 +468,7 @@
                 this.appId = '';
                 this.accessKey = '';
                 this.searchHistory = JSON.parse(localStorage.getItem('searchHistory')) || [];
+                this.gasUrl = 'https://script.google.com/macros/s/AKfycbzicdASgSwQa2Oy6K_bDO03RcWfD2QWKqSLVhMC3kRfdj4NKYSoUY5nrH7tq3uTFW007w/exec';
                 this.trendHistory = JSON.parse(localStorage.getItem('trendHistory')) || [];
                 this.updateApiStatus();
                 this.updateStats();
@@ -739,9 +740,59 @@
                         <div class="trend-keyword">${trend.keyword}</div>
                         <div class="trend-dates">開始：${trend.startDate}</div>
                         <div class="trend-rank">記録数：${trend.records.length}件</div>
+                        <button onclick="tracker.recordTrend('${trend.keyword}')" style="background:#667eea;color:white;border:none;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:12px;margin-right:8px;">📊 今すぐ記録</button>
                         <button class="trend-delete" onclick="tracker.deleteTrend(${trend.id})">削除</button>
                     </div>
                 `).join('');
+            }
+
+            async recordTrend(keyword) {
+                if (!this.appId) {
+                    this.showAlert('先に設定タブでAPIキーを設定してください', 'error');
+                    return;
+                }
+                this.showAlert(`「${keyword}」を記録中...`, 'success');
+                try {
+                    const res = await fetch(
+                        `https://openapi.rakuten.co.jp/ichibams/api/IchibaItem/Search/20220601?` +
+                        `format=json&keyword=${encodeURIComponent(keyword)}&hits=30&` +
+                        `elements=itemName,itemPrice&` +
+                        `applicationId=${encodeURIComponent(this.appId)}&` +
+                        `accessKey=${encodeURIComponent(this.accessKey)}`
+                    );
+                    const data = await res.json();
+                    if (!data.Items || data.Items.length === 0) {
+                        this.showAlert('商品が見つかりませんでした', 'error');
+                        return;
+                    }
+                    const prices = data.Items.map(i => i.Item.itemPrice);
+                    const minPrice = Math.min(...prices);
+                    const maxPrice = Math.max(...prices);
+                    const avgPrice = Math.round(prices.reduce((a,b) => a+b, 0) / prices.length);
+                    const record = {
+                        date: new Date().toLocaleString('ja-JP'),
+                        keyword,
+                        minPrice,
+                        maxPrice,
+                        avgPrice,
+                        count: prices.length
+                    };
+                    // ローカルにも保存
+                    const trend = this.trendHistory.find(t => t.keyword === keyword);
+                    if (trend) {
+                        trend.records.push(record);
+                        localStorage.setItem('trendHistory', JSON.stringify(this.trendHistory));
+                        this.renderTrends();
+                    }
+                    // GASに送信
+                    await fetch(this.gasUrl, {
+                        method: 'POST',
+                        body: JSON.stringify(record)
+                    });
+                    this.showAlert(`「${keyword}」を記録しました ✅ 最安¥${minPrice.toLocaleString()} 平均¥${avgPrice.toLocaleString()}`, 'success');
+                } catch(err) {
+                    this.showAlert('記録に失敗しました: ' + err.message, 'error');
+                }
             }
 
             updateStats() {
